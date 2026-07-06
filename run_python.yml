@@ -1,37 +1,43 @@
 name: 运行JQXX降维代码
+# 触发条件：推送代码自动跑 + 页面手动触发
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  run-code:
+  run-task:
     runs-on: ubuntu-latest
     steps:
-      - name: 检出仓库代码
+      # 1. 拉取仓库所有代码
+      - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 配置Python 3.10
+      # 2. 配置Python环境
+      - name: 配置Python3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: "pip"
+          cache: pip # 缓存依赖，加速下次运行
 
-      - name: 一键安装全部依赖
+      # 3. 一键安装全部需要的库（解决库缺失报错）
+      - name: 安装依赖包
         run: |
           python -m pip install --upgrade pip
           pip install numpy pandas matplotlib scikit-learn umap-learn -i https://pypi.tuna.tsinghua.edu.cn/simple
-          # 加速OpenML数据集下载
+          # 国内镜像加速MNIST数据集下载
           echo "OPENML_BASE_URL=https://openml.liacs.nl/api/v1/" >> $GITHUB_ENV
 
-      - name: 执行Python脚本
+      # 4. 执行JQXX.py
+      - name: 运行代码
         run: |
-          # 服务端强制无GUI绘图后端
+          # 服务器无图形界面，强制matplotlib使用无窗口后端
           python -c "import matplotlib; matplotlib.use('Agg')"
           python JQXX.py
 
-      - name: 保存生成的绘图结果
+      # 5. 下载绘图结果（运行完可在页面下载生成的图片）
+      - name: 保存输出图片
         uses: actions/upload-artifact@v4
         with:
-          name: 降维输出图片
+          name: 降维绘图结果
           path: ./result
