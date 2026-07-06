@@ -1,30 +1,45 @@
-name: 运行JQXX降维代码
+name: 使用Conda的Python包
 on:
   push:
-    branches: [ main ] # 提交代码自动触发
-  workflow_dispatch: # 支持页面手动点击运行
+    branches: [ main ]
+  workflow_dispatch: # 支持页面手动运行
 
 jobs:
-  run-code:
+  conda-run:
     runs-on: ubuntu-latest
     steps:
-      # 1. 拉取仓库代码
-      - name: Checkout code
+      # 拉取仓库代码
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      # 2. 配置Python环境
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      # 加载Miniconda环境
+      - name: 配置Conda
+        uses: conda-incubator/setup-miniconda@v3
         with:
           python-version: "3.10"
-          cache: "pip" # 缓存依赖，下次运行更快
+          activate-environment: jqxx-env
 
-      # 3. 一键安装全部依赖（核心解决库缺失报错）
-      - name: Install all dependencies
+      # 安装全部依赖（核心解决库缺失）
+      - name: 安装依赖包
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy pandas matplotlib scikit-learn umap-learn -i https://pypi.tuna.tsinghua.edu.cn/simple
+          conda install -y numpy pandas matplotlib scikit-learn
+          # conda无umap-learn，用pip安装
+          pip install umap-learn -i https://pypi.tuna.tsinghua.edu.cn/simple
+          # 加速OpenML数据集下载
+          echo "export OPENML_BASE_URL=https://openml.liacs.nl/api/v1/" >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+          conda activate jqxx-env
 
-      # 4. 执行你的JQXX.py脚本
-      - name: Run JQXX.py
-        run: python JQXX.py
+      # 执行代码
+      - name: 运行JQXX.py
+        run: |
+          conda activate jqxx-env
+          # 强制matplotlib使用无GUI后端，避免绘图报错
+          echo "import matplotlib; matplotlib.use('Agg')" > preload.py
+          python -c "exec(open('preload.py').read()); exec(open('JQXX.py').read())"
+
+      # 可选：上传生成的绘图结果result文件夹
+      - name: 导出运行结果图片
+        uses: actions/upload-artifact@v4
+        with:
+          name: 降维绘图结果
+          path: ./result
