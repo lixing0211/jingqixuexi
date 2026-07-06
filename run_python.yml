@@ -2,36 +2,36 @@ name: 运行JQXX降维代码
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # 页面手动运行
+  workflow_dispatch:
 
 jobs:
   run-code:
     runs-on: ubuntu-latest
     steps:
-      - name: 检出代码
+      - name: 检出仓库代码
         uses: actions/checkout@v4
 
-      - name: 配置Python3.10
+      - name: 配置Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
           cache: "pip"
 
-      - name: 批量安装全部依赖
+      - name: 一键安装全部依赖
         run: |
           python -m pip install --upgrade pip
           pip install numpy pandas matplotlib scikit-learn umap-learn -i https://pypi.tuna.tsinghua.edu.cn/simple
-          # 加速MNIST数据集下载
+          # 加速OpenML数据集下载
           echo "OPENML_BASE_URL=https://openml.liacs.nl/api/v1/" >> $GITHUB_ENV
 
-      - name: 执行脚本
+      - name: 执行Python脚本
         run: |
-          # 服务端无图形后端，提前设置
+          # 服务端强制无GUI绘图后端
           python -c "import matplotlib; matplotlib.use('Agg')"
           python JQXX.py
 
-      - name: 保存绘图结果
+      - name: 保存生成的绘图结果
         uses: actions/upload-artifact@v4
         with:
-          name: 输出图片结果
+          name: 降维输出图片
           path: ./result
